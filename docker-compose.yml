@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: matchops-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: matchops
+    ports:
+      - "5434:5432"
+    volumes:
+      - matchops_postgres:/var/lib/postgresql/data
+
+volumes:
+  matchops_postgres:
