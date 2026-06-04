@@ -3,6 +3,8 @@ import { OpportunityFeed } from "@/components/OpportunityFeed";
 import { prisma } from "@/lib/db";
 import { calculateMatchScore } from "@/lib/matching";
 
+export const dynamic = "force-dynamic";
+
 export default async function Home() {
   const opportunities = await prisma.opportunity.findMany({
     where: { status: OpportunityStatus.ACTIVE },

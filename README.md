@@ -63,3 +63,7 @@ Después de esta base, conviene construir:
 - Conversión de sesión anónima a usuario registrado.
 - Guardados persistentes por usuario.
 - Mensajería básica.
+
+## Despliegue
+
+Revisa [DEPLOYMENT.md](./DEPLOYMENT.md) para desplegar en Vercel con PostgreSQL en la nube.
