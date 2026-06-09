@@ -15,6 +15,11 @@ export function AuthForm() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // NUEVOS ESTADOS LABORALES ACTUALIZADOS
+  const [isCurrentlyWorking, setIsCurrentlyWorking] = useState(false);
+  const [currentCompany, setCurrentCompany] = useState("");
+  const [currentRole, setCurrentRole] = useState(""); // ◄--- Puesto actual
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
@@ -29,6 +34,12 @@ export function AuthForm() {
         email,
         password,
         role,
+        // ENVIAR NUEVOS CAMPOS SOLO SI ES REGISTRO Y CANDIDATO
+        ...(mode === "register" && role === "CANDIDATE" && {
+          isCurrentlyWorking,
+          currentCompany: isCurrentlyWorking ? currentCompany : "",
+          currentRole: isCurrentlyWorking ? currentRole : "" // ◄--- Manda el cargo al backend
+        }),
         anonymousToken:
           mode === "register"
             ? window.localStorage.getItem("matchops.session") ?? undefined
@@ -43,7 +54,16 @@ export function AuthForm() {
       setLoading(false);
       return;
     }
+// Guardar la respuesta exitosa en el localStorage antes de redirigir
+    if (data.user) {
+      window.localStorage.setItem("matchops.session", data.token || "");
+      window.localStorage.setItem("matchops.isWorking", String(data.user.isCurrentlyWorking ?? false));
+      window.localStorage.setItem("matchops.company", data.user.currentCompany ?? "");
+      window.localStorage.setItem("matchops.role", data.user.currentRole ?? "");
+      window.localStorage.setItem("matchops.description", data.user.description ?? "");
+    }
 
+    // Tu línea original que redirige al usuario se queda quieta abajo:
     window.location.href = data.user.role === "PUBLISHER" ? "/publisher" : "/";
   }
 
@@ -56,7 +76,7 @@ export function AuthForm() {
             {mode === "login" ? "Ingresar" : "Crear cuenta"}
           </h1>
         </div>
-
+;
         <div className="mb-4 grid grid-cols-2 rounded-lg border border-line bg-mist p-1">
           <button
             type="button"
@@ -133,6 +153,60 @@ export function AuthForm() {
                 <option value="PUBLISHER">Publicador</option>
               </select>
             </label>
+          ) : null}
+
+          {/* SECCIÓN DE PREGUNTAS LABORALES MEJORADA (CONDICIONAL) */}
+          {mode === "register" && role === "CANDIDATE" ? (
+            <div className="space-y-3 rounded-lg border border-line bg-mist/50 p-3 mt-4">
+              <label className="flex items-center gap-2 cursor-pointer py-1">
+                <input
+                  type="checkbox"
+                  checked={isCurrentlyWorking}
+                  onChange={(event) => {
+                    setIsCurrentlyWorking(event.target.checked);
+                    if (!event.target.checked) {
+                      setCurrentCompany("");
+                      setCurrentRole("");
+                    }
+                  }}
+                  className="h-4 w-4 rounded border-line text-moss focus:ring-moss"
+                />
+                <span className="text-sm font-medium text-ink">
+                  ¿Estás trabajando actualmente?
+                </span>
+              </label>
+
+              {/* Muestra dónde trabaja y el puesto si el checkbox está marcado */}
+              {isCurrentlyWorking ? (
+                <div className="space-y-3 pt-2 border-t border-line/60 animate-fadeIn">
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-ink/70">
+                      ¿En qué empresa o lugar trabajas?
+                    </span>
+                    <input
+                      required={isCurrentlyWorking}
+                      value={currentCompany}
+                      onChange={(event) => setCurrentCompany(event.target.value)}
+                      className="h-11 w-full rounded-lg border border-line px-3 text-sm outline-none focus:border-moss bg-white"
+                      placeholder="Ej: Banco de la Nación, Empresa XYZ"
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-ink/70">
+                      ¿De qué estás trabajando? (Tu cargo/puesto)
+                    </span>
+                    <input
+                      required={isCurrentlyWorking}
+                      value={currentRole}
+                      onChange={(event) => setCurrentRole(event.target.value)}
+                      className="h-11 w-full rounded-lg border border-line px-3 text-sm outline-none focus:border-moss bg-white"
+                      placeholder="Ej: Asistente de Sistemas, Analista, Chef"
+                    />
+                  </label>
+                </div>
+              ) : null}
+            </div>
           ) : null}
 
           {error ? (

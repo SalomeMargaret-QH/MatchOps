@@ -5,12 +5,16 @@ import { createAuthSession } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { hashPassword } from "@/lib/password";
 
+// ACTUALIZACIÓN DEL ESQUEMA DE VALIDACIÓN ZOD
 const schema = z.object({
   name: z.string().min(2),
   email: z.string().email(),
   password: z.string().min(8),
   role: z.enum(["CANDIDATE", "PUBLISHER"]).default("CANDIDATE"),
-  anonymousToken: z.string().optional()
+  anonymousToken: z.string().optional(),
+  // Nuevos campos opcionales validados
+  isCurrentlyWorking: z.boolean().optional(),
+  currentCompany: z.string().optional()
 });
 
 export async function POST(request: NextRequest) {
@@ -32,7 +36,10 @@ export async function POST(request: NextRequest) {
         email,
         passwordHash: await hashPassword(body.password),
         role: body.role as UserRole,
-        reputationPoints: body.role === "PUBLISHER" ? 25 : 0
+        reputationPoints: body.role === "PUBLISHER" ? 25 : 0,
+        // GUARDANDO LOS NUEVOS CAMPOS EN LA BASE DE DATOS
+        isCurrentlyWorking: body.isCurrentlyWorking ?? false,
+        currentCompany: body.isCurrentlyWorking ? body.currentCompany : null
       }
     });
 

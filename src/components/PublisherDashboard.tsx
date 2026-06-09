@@ -63,6 +63,9 @@ export function PublisherDashboard() {
   const [saving, setSaving] = useState(false);
   const [mutatingId, setMutatingId] = useState<string | null>(null);
   const [error, setError] = useState("");
+    // NUEVO: Guarda el ID de la oferta seleccionada para ver sus candidatos
+  const [selectedOpportunityId, setSelectedOpportunityId] = useState<string | null>(null);
+
 
   useEffect(() => {
     refresh();
@@ -199,15 +202,47 @@ export function PublisherDashboard() {
             </Field>
 
             <Field label="Etiquetas">
-              <input
-                required
-                value={form.tags}
-                onChange={(event) => setForm({ ...form, tags: event.target.value })}
-                className="h-11 w-full rounded-lg border border-line px-3 text-sm outline-none focus:border-moss"
-                placeholder="React, TypeScript, UI"
-              />
-            </Field>
-
+  <input
+    required
+    value={form.tags}
+    onChange={(event) => setForm({ ...form, tags: event.target.value })}
+    className="h-11 w-full rounded-lg border border-line px-3 text-sm outline-none focus:border-moss"
+    placeholder="React, TypeScript, UI"
+  />
+  
+  {/* VISTA PREVIA INTERACTIVA DE REQUISITOS (TAGS) EN TIEMPO REAL */}
+  <div className="mt-2 flex flex-wrap gap-1.5">
+    {form.tags.split(",")
+      .map((tag) => tag.trim())
+      .filter(Boolean)
+      .map((tag, idx) => (
+        <span 
+          key={idx} 
+          className="inline-flex items-center gap-1 rounded-full bg-moss/10 px-2.5 py-1 text-xs font-bold text-moss shadow-sm border border-moss/20"
+        >
+          #{tag.toLowerCase()}
+          <button
+            type="button"
+            title="Eliminar requisito"
+            onClick={() => {
+              const currentTags = form.tags.split(",").map((t) => t.trim()).filter(Boolean);
+              currentTags.splice(idx, 1);
+              setForm({ ...form, tags: currentTags.join(", ") });
+            }}
+            className="ml-0.5 font-normal text-xs text-moss/60 hover:text-coral transition-colors"
+          >
+            ×
+          </button>
+        </span>
+      ))
+    }
+    {form.tags.trim() === "" && (
+      <p className="text-[11px] text-ink/40 italic">
+        Separa los requisitos con comas (Ej: Titulado, Inglés, ONPE) para activar las etiquetas de exclusión.
+      </p>
+    )}
+  </div>
+</Field>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Modalidad">
                 <select
@@ -410,5 +445,40 @@ function ActionButton({
       {busy ? <Loader2 size={17} className="animate-spin" /> : icon}
       {label}
     </button>
+  );
+}
+function DecisionButtons({
+  busy,
+  onAccept,
+  onReject
+}: {
+  busy: boolean;
+  onAccept: () => void;
+  onReject: () => void;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      {/* Botón de Rechazo (Semáforo Rojo) */}
+      <button
+        type="button"
+        disabled={busy}
+        onClick={onReject}
+        className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-coral/30 bg-coral/5 px-3 text-xs font-bold text-coral transition hover:bg-coral hover:text-white disabled:cursor-not-allowed disabled:opacity-50 shadow-sm"
+      >
+        {busy ? <Loader2 size={14} className="animate-spin" /> : "✕"}
+        Rechazar
+      </button>
+
+      {/* Botón de Aceptar Match (Semáforo Verde) */}
+      <button
+        type="button"
+        disabled={busy}
+        onClick={onAccept}
+        className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-moss px-3 text-xs font-bold text-white transition hover:bg-ink shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {busy ? <Loader2 size={14} className="animate-spin" /> : "✓"}
+        Aceptar Match
+      </button>
+    </div>
   );
 }

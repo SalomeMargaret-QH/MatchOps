@@ -41,25 +41,28 @@ enum MessageStatus {
 }
 
 model User {
-  id               String             @id @default(cuid())
-  email            String?            @unique
-  passwordHash     String?
-  name             String?
-  role             UserRole           @default(CANDIDATE)
-  reputationPoints Int                @default(0)
-  profileScore     Int                @default(0)
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
-  anonymousSessions AnonymousSession[]
-  opportunities    Opportunity[]      @relation("PublisherOpportunities")
-  interactions     Interaction[]
-  implicitProfile  ImplicitProfile?
-  saved            SavedOpportunity[]
-  sentMessages     Message[]          @relation("SentMessages")
-  receivedMessages Message[]          @relation("ReceivedMessages")
-  conversationsA   Conversation[]     @relation("CandidateConversations")
-  conversationsB   Conversation[]     @relation("PublisherConversations")
-  authSessions     AuthSession[]
+  id                 String             @id @default(cuid())
+  email              String?            @unique
+  passwordHash       String?
+  name               String?
+  role               UserRole           @default(CANDIDATE)
+  reputationPoints   Int                @default(0)
+  profileScore       Int                @default(0)
+  isCurrentlyWorking Boolean?           @default(false)
+  currentCompany     String?
+  currentRole        String? // Agregado correctamente aquí para el puesto actual
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  anonymousSessions  AnonymousSession[]
+  opportunities      Opportunity[]      @relation("PublisherOpportunities")
+  interactions       Interaction[]
+  implicitProfile    ImplicitProfile?
+  saved              SavedOpportunity[]
+  sentMessages       Message[]          @relation("SentMessages")
+  receivedMessages   Message[]          @relation("ReceivedMessages")
+  conversationsA     Conversation[]     @relation("CandidateConversations")
+  conversationsB     Conversation[]     @relation("PublisherConversations")
+  authSessions       AuthSession[]
 }
 
 model AuthSession {
@@ -72,49 +75,49 @@ model AuthSession {
 }
 
 model AnonymousSession {
-  id             String        @id @default(cuid())
-  token          String        @unique
-  convertedAt    DateTime?
-  expiresAt      DateTime
-  userId         String?
-  user           User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
-  interactions   Interaction[]
+  id              String           @id @default(cuid())
+  token           String           @unique
+  convertedAt     DateTime?
+  expiresAt       DateTime
+  userId          String?
+  user            User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  interactions    Interaction[]
   implicitProfile ImplicitProfile?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 }
 
 model Opportunity {
-  id             String              @id @default(cuid())
-  title          String
-  description    String
-  tags           String[]
-  workMode       WorkMode
-  location       String?
-  contractType   String
-  compensation   String?
-  status         OpportunityStatus   @default(ACTIVE)
-  publisherId    String
-  publisher      User                @relation("PublisherOpportunities", fields: [publisherId], references: [id], onDelete: Cascade)
-  interactions   Interaction[]
-  savedBy        SavedOpportunity[]
-  conversations  Conversation[]
-  createdAt      DateTime            @default(now())
-  updatedAt      DateTime            @updatedAt
-  archivedAt     DateTime?
+  id            String             @id @default(cuid())
+  title         String
+  description   String
+  tags          String[]
+  workMode      WorkMode
+  location      String?
+  contractType  String
+  compensation  String?
+  status        OpportunityStatus  @default(ACTIVE)
+  publisherId   String
+  publisher     User               @relation("PublisherOpportunities", fields: [publisherId], references: [id], onDelete: Cascade)
+  interactions  Interaction[]
+  savedBy       SavedOpportunity[]
+  conversations Conversation[]
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  archivedAt    DateTime?
 }
 
 model Interaction {
-  id                 String             @id @default(cuid())
+  id                 String            @id @default(cuid())
   type               InteractionType
   dwellTimeSeconds   Int?
   opportunityId      String
-  opportunity        Opportunity        @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  opportunity        Opportunity       @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
   userId             String?
-  user               User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user               User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
   anonymousSessionId String?
-  anonymousSession   AnonymousSession?  @relation(fields: [anonymousSessionId], references: [id], onDelete: SetNull)
-  createdAt          DateTime           @default(now())
+  anonymousSession   AnonymousSession? @relation(fields: [anonymousSessionId], references: [id], onDelete: SetNull)
+  createdAt          DateTime          @default(now())
 }
 
 model ImplicitProfile {
