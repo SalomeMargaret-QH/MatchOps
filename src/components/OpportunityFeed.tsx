@@ -53,35 +53,18 @@ export function OpportunityFeed({
   const [currentRole, setCurrentRole] = useState("");
   const [description, setDescription] = useState("");
 
-        useEffect(() => {
+          useEffect(() => {
     const existingToken = window.localStorage.getItem("matchops.session");
 
-    // LEER INMEDIATAMENTE LOS DATOS LABORALES GUARDADOS EN EL LOGIN
-    const savedWorking = window.localStorage.getItem("matchops.isWorking") === "true";
-    const savedCompany = window.localStorage.getItem("matchops.company") ?? "";
-    const savedRole = window.localStorage.getItem("matchops.role") ?? "";
-    const savedDesc = window.localStorage.getItem("matchops.description") ?? "";
-    
-    setIsCurrentlyWorking(savedWorking);
-    setCurrentCompany(savedCompany);
-    setCurrentRole(savedRole);
-    setDescription(savedDesc);
-
-    if (existingToken) {
-      setToken(existingToken);
-      refresh(existingToken);
+    // ◄--- LA SOLUCIÓN EXCLUSIVA: Si la laptop no tiene un token guardado, salta de frente al login de inmediato
+    if (!existingToken) {
+      window.location.href = "/auth";
       return;
     }
 
-    fetch("/api/sessions", { method: "POST" })
-      .then((response) => response.json())
-      .then((session) => {
-        window.localStorage.setItem("matchops.session", session.token);
-        setToken(session.token);
-        refresh(session.token);
-      });
+    setToken(existingToken);
+    refresh(existingToken);
   }, []);
-
 
 
   // Graba los cambios en la laptop automáticamente cada vez que el usuario escribe
