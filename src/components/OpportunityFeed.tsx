@@ -54,16 +54,20 @@ export function OpportunityFeed({
   const [description, setDescription] = useState("");
 
           useEffect(() => {
+    // Leemos el token de sesión o el rol guardado para verificar si realmente iniciaste sesión
     const existingToken = window.localStorage.getItem("matchops.session");
+    const savedRole = window.localStorage.getItem("matchops.role");
 
-    // ◄--- LA SOLUCIÓN EXCLUSIVA: Si la laptop no tiene un token guardado, salta de frente al login de inmediato
-    if (!existingToken) {
+    // ◄--- CORRECCIÓN DE BUCLE: Si no hay token de sesión Y tampoco hay un rol guardado, recién ahí redirige a /auth
+    if (!existingToken && !savedRole) {
       window.location.href = "/auth";
       return;
     }
 
-    setToken(existingToken);
-    refresh(existingToken);
+    if (existingToken) {
+      setToken(existingToken);
+      refresh(existingToken);
+    }
   }, []);
 
 
@@ -343,13 +347,14 @@ export function OpportunityFeed({
           </label>
           <div className="flex items-center gap-2 rounded-lg border border-line bg-mist px-3 focus-within:border-moss transition">
             <Search size={17} aria-hidden className="text-ink/40" />
-            <input
-              id="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              className="h-11 w-full bg-transparent text-sm outline-none text-ink"
-              placeholder="Ej. React, Python, Remoto..."
-            />
+           <input
+  id="search"
+  value={query}
+  onChange={(event) => setQuery(event.target.value)}
+  autoComplete="off" // ◄--- PEGA ESTA LÍNEA AQUÍ
+  className="h-11 w-full bg-transparent text-sm outline-none text-ink"
+  placeholder="Ej. React, Python, Remoto..."
+/>
           </div>
         </div>
 

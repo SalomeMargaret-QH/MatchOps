@@ -55,12 +55,12 @@ export function AuthForm() {
       return;
     }
 // Guardar la respuesta exitosa en el localStorage antes de redirigir
-    if (data.user) {
-      window.localStorage.setItem("matchops.session", data.token || "");
+     if (data.user) {
+      window.localStorage.setItem("matchops.session", data.token || data.user.id || "");
+      window.localStorage.setItem("matchops.role", data.user.role || "CANDIDATE");
       window.localStorage.setItem("matchops.isWorking", String(data.user.isCurrentlyWorking ?? false));
       window.localStorage.setItem("matchops.company", data.user.currentCompany ?? "");
-      window.localStorage.setItem("matchops.role", data.user.currentRole ?? "");
-      window.localStorage.setItem("matchops.description", data.user.description ?? "");
+      window.localStorage.setItem("matchops.roleJob", data.user.currentRole ?? "");
     }
 
     // Tu línea original que redirige al usuario se queda quieta abajo:
