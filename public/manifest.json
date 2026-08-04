@@ -1,0 +1,33 @@
+{
+  "name": "MatchOps",
+  "short_name": "MatchOps",
+  "description": "Plataforma de matching de empleo: candidatos y empresas se conectan según intereses reales, con postulación en un clic.",
+  "start_url": "/?source=pwa",
+  "id": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0f1b2d",
+  "theme_color": "#0f1b2d",
+  "lang": "es-PE",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
