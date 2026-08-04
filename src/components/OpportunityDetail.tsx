@@ -26,7 +26,7 @@ type OpportunityDetailData = {
   contractType: string;
   compensation: string | null;
   applicationUrl: string | null;
-  status: "ACTIVE" | "PAUSED" | "ARCHIVED";
+  status: "DRAFT" | "ACTIVE" | "PAUSED" | "ARCHIVED";
   publisher: { name: string | null; reputationPoints: number };
   createdAt: string;
 };
