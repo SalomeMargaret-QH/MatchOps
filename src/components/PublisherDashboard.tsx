@@ -9,7 +9,16 @@ import {
   Loader2,
   PauseCircle,
   Plus,
-  Radio
+  Radio,
+  Users,
+  Mail,
+  Star,
+  ChevronDown,
+  ChevronUp,
+  Link2,
+  Save,
+  Pencil,
+  MessageCircle
 } from "lucide-react";
 
 type WorkMode = "REMOTE" | "HYBRID" | "ONSITE";
@@ -24,6 +33,7 @@ type PublisherOpportunity = {
   location: string | null;
   contractType: string;
   compensation: string | null;
+  applicationUrl: string | null;
   status: Status;
   createdAt: string;
   _count: {
@@ -46,6 +56,20 @@ const statusLabels: Record<Status, string> = {
   ARCHIVED: "Archivada"
 };
 
+type Applicant = {
+  appliedAt: string;
+  candidate: {
+    id: string;
+    name: string | null;
+    email: string | null;
+    reputationPoints: number;
+    isCurrentlyWorking: boolean | null;
+    currentCompany: string | null;
+    currentRole: string | null;
+    description: string | null;
+  };
+};
+
 const emptyForm = {
   title: "",
   description: "",
@@ -53,7 +77,8 @@ const emptyForm = {
   workMode: "REMOTE" as WorkMode,
   location: "",
   contractType: "Freelance",
-  compensation: ""
+  compensation: "",
+  applicationUrl: ""
 };
 
 export function PublisherDashboard() {
@@ -63,8 +88,14 @@ export function PublisherDashboard() {
   const [saving, setSaving] = useState(false);
   const [mutatingId, setMutatingId] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
     // NUEVO: Guarda el ID de la oferta seleccionada para ver sus candidatos
   const [selectedOpportunityId, setSelectedOpportunityId] = useState<string | null>(null);
+  const [applicantsByOpportunity, setApplicantsByOpportunity] = useState<
+    Record<string, Applicant[]>
+  >({});
+  const [loadingApplicantsId, setLoadingApplicantsId] = useState<string | null>(null);
+  const [messagingCandidateId, setMessagingCandidateId] = useState<string | null>(null);
 
 
   useEffect(() => {
@@ -89,21 +120,52 @@ export function PublisherDashboard() {
     event.preventDefault();
     setSaving(true);
 
-    await fetch("/api/publisher/opportunities", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...form,
-        tags: form.tags
-          .split(",")
-          .map((tag) => tag.trim())
-          .filter(Boolean)
-      })
-    });
+    const payload = {
+      ...form,
+      tags: form.tags
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter(Boolean)
+    };
+
+    if (editingId) {
+      await fetch(`/api/publisher/opportunities/${editingId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      setEditingId(null);
+    } else {
+      await fetch("/api/publisher/opportunities", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+    }
 
     setForm(emptyForm);
     await refresh();
     setSaving(false);
+  }
+
+  function startEdit(opportunity: PublisherOpportunity) {
+    setEditingId(opportunity.id);
+    setForm({
+      title: opportunity.title,
+      description: opportunity.description,
+      tags: opportunity.tags.join(", "),
+      workMode: opportunity.workMode,
+      location: opportunity.location ?? "",
+      contractType: opportunity.contractType,
+      compensation: opportunity.compensation ?? "",
+      applicationUrl: opportunity.applicationUrl ?? ""
+    });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setForm(emptyForm);
   }
 
   async function logout() {
@@ -120,6 +182,47 @@ export function PublisherDashboard() {
     });
     await refresh();
     setMutatingId(null);
+  }
+
+  async function toggleApplicants(opportunityId: string) {
+    if (selectedOpportunityId === opportunityId) {
+      setSelectedOpportunityId(null);
+      return;
+    }
+
+    setSelectedOpportunityId(opportunityId);
+
+    if (!applicantsByOpportunity[opportunityId]) {
+      setLoadingApplicantsId(opportunityId);
+      const response = await fetch(
+        `/api/publisher/opportunities/${opportunityId}/applicants`
+      );
+      const data = await response.json();
+      if (response.ok) {
+        setApplicantsByOpportunity((prev) => ({
+          ...prev,
+          [opportunityId]: data.applicants
+        }));
+      }
+      setLoadingApplicantsId(null);
+    }
+  }
+
+  async function messageApplicant(opportunityId: string, candidateId: string) {
+    setMessagingCandidateId(candidateId);
+    try {
+      const response = await fetch("/api/conversations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ opportunityId, candidateId })
+      });
+      const data = await response.json();
+      if (response.ok) {
+        window.location.href = `/mensajes?conversationId=${data.conversation.id}`;
+      }
+    } finally {
+      setMessagingCandidateId(null);
+    }
   }
 
   const totals = useMemo(() => {
@@ -150,6 +253,13 @@ export function PublisherDashboard() {
           >
             Ver feed
           </a>
+          <a
+            href="/mensajes"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-line px-4 text-sm font-medium text-ink transition hover:border-moss hover:text-moss"
+          >
+            <MessageCircle size={16} />
+            Mensajes
+          </a>
           <button
             type="button"
             onClick={logout}
@@ -175,7 +285,9 @@ export function PublisherDashboard() {
           >
             <div className="mb-4 flex items-center gap-2">
               <BriefcaseBusiness size={19} className="text-moss" />
-              <h2 className="text-base font-semibold text-ink">Nueva oportunidad</h2>
+              <h2 className="text-base font-semibold text-ink">
+                {editingId ? "Editar oportunidad" : "Nueva oportunidad"}
+              </h2>
             </div>
 
             <Field label="Título">
@@ -292,14 +404,43 @@ export function PublisherDashboard() {
               </Field>
             </div>
 
-            <button
-              type="submit"
-              disabled={saving}
-              className="mt-2 inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-ink px-4 text-sm font-medium text-white transition hover:bg-moss disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              {saving ? <Loader2 size={17} className="animate-spin" /> : <Plus size={17} />}
-              Publicar oportunidad
-            </button>
+            <Field label="Enlace de postulación (opcional)">
+              <input
+                type="url"
+                value={form.applicationUrl}
+                onChange={(event) =>
+                  setForm({ ...form, applicationUrl: event.target.value })
+                }
+                className="h-11 w-full rounded-lg border border-line px-3 text-sm outline-none focus:border-moss"
+                placeholder="https://tuempresa.com/postular"
+              />
+            </Field>
+
+            <div className="mt-2 flex gap-2">
+              <button
+                type="submit"
+                disabled={saving}
+                className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-ink px-4 text-sm font-medium text-white transition hover:bg-moss disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {saving ? (
+                  <Loader2 size={17} className="animate-spin" />
+                ) : editingId ? (
+                  <Save size={17} />
+                ) : (
+                  <Plus size={17} />
+                )}
+                {editingId ? "Guardar cambios" : "Publicar oportunidad"}
+              </button>
+              {editingId && (
+                <button
+                  type="button"
+                  onClick={cancelEdit}
+                  className="h-11 rounded-lg border border-line px-4 text-sm font-semibold text-ink/60 transition hover:bg-mist"
+                >
+                  Cancelar
+                </button>
+              )}
+            </div>
           </form>
         </aside>
 
@@ -349,9 +490,26 @@ export function PublisherDashboard() {
                   <p className="mt-2 max-w-3xl text-sm leading-6 text-ink/70">
                     {opportunity.description}
                   </p>
+                  {opportunity.applicationUrl && (
+                    <a
+                      href={opportunity.applicationUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-moss hover:underline"
+                    >
+                      <Link2 size={13} />
+                      {opportunity.applicationUrl}
+                    </a>
+                  )}
                 </div>
 
                 <div className="flex shrink-0 flex-wrap gap-2">
+                  <ActionButton
+                    label="Editar"
+                    icon={<Pencil size={17} />}
+                    busy={false}
+                    onClick={() => startEdit(opportunity)}
+                  />
                   {opportunity.status !== "ACTIVE" ? (
                     <ActionButton
                       label="Activar"
@@ -392,6 +550,104 @@ export function PublisherDashboard() {
                 <span>{opportunity._count.savedBy} guardados</span>
                 <span>{opportunity._count.conversations} conversaciones</span>
               </footer>
+
+              <button
+                type="button"
+                onClick={() => toggleApplicants(opportunity.id)}
+                className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-moss hover:text-ink transition"
+              >
+                <Users size={16} />
+                Ver postulantes
+                {selectedOpportunityId === opportunity.id ? (
+                  <ChevronUp size={16} />
+                ) : (
+                  <ChevronDown size={16} />
+                )}
+              </button>
+
+              {selectedOpportunityId === opportunity.id && (
+                <div className="mt-3 space-y-2 rounded-lg border border-line bg-mist/50 p-3">
+                  {loadingApplicantsId === opportunity.id ? (
+                    <p className="flex items-center gap-2 text-sm text-ink/60">
+                      <Loader2 size={15} className="animate-spin" />
+                      Cargando postulantes...
+                    </p>
+                  ) : (applicantsByOpportunity[opportunity.id]?.length ?? 0) === 0 ? (
+                    <p className="text-sm text-ink/50">
+                      Todavía nadie ha postulado a esta oferta.
+                    </p>
+                  ) : (
+                    applicantsByOpportunity[opportunity.id].map((applicant) => (
+                      <div
+                        key={applicant.candidate.id}
+                        className="rounded-lg border border-line bg-white p-3 shadow-sm"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-ink text-sm font-bold text-white">
+                            {applicant.candidate.name
+                              ? applicant.candidate.name
+                                  .trim()
+                                  .split(/\s+/)
+                                  .slice(0, 2)
+                                  .map((part) => part[0]?.toUpperCase())
+                                  .join("")
+                              : "C"}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <p className="font-semibold text-ink">
+                                {applicant.candidate.name ?? "Candidato"}
+                              </p>
+                              <span className="inline-flex items-center gap-1 text-xs font-semibold text-gold">
+                                <Star size={13} />
+                                {applicant.candidate.reputationPoints} pts
+                              </span>
+                            </div>
+
+                            {applicant.candidate.isCurrentlyWorking && applicant.candidate.currentRole ? (
+                              <p className="mt-1 text-xs text-ink/60">
+                                Actualmente: {applicant.candidate.currentRole}
+                                {applicant.candidate.currentCompany
+                                  ? ` en ${applicant.candidate.currentCompany}`
+                                  : ""}
+                              </p>
+                            ) : (
+                              <p className="mt-1 text-xs text-ink/60">Disponible para trabajar</p>
+                            )}
+
+                            {applicant.candidate.description && (
+                              <p className="mt-2 text-sm leading-relaxed text-ink/75">
+                                {applicant.candidate.description}
+                              </p>
+                            )}
+
+                            {applicant.candidate.email && (
+                              <p className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-moss">
+                                <Mail size={13} />
+                                {applicant.candidate.email}
+                              </p>
+                            )}
+
+                            <button
+                              type="button"
+                              onClick={() => messageApplicant(opportunity.id, applicant.candidate.id)}
+                              disabled={messagingCandidateId === applicant.candidate.id}
+                              className="mt-3 inline-flex h-8 items-center gap-1.5 rounded-md bg-ink px-3 text-xs font-bold text-white transition hover:bg-moss disabled:opacity-60"
+                            >
+                              {messagingCandidateId === applicant.candidate.id ? (
+                                <Loader2 size={13} className="animate-spin" />
+                              ) : (
+                                <MessageCircle size={13} />
+                              )}
+                              Enviar mensaje
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
             </article>
           ))}
         </section>

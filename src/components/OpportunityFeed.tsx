@@ -14,7 +14,12 @@ import {
   MapPin,
   Briefcase,
   DollarSign,
-  Award
+  Award,
+  Pencil,
+  Save,
+  BadgeCheck,
+  ExternalLink,
+  MessageCircle
 } from "lucide-react";
 
 type Opportunity = {
@@ -26,6 +31,7 @@ type Opportunity = {
   location: string | null;
   contractType: string;
   compensation: string | null;
+  applicationUrl: string | null;
   matchScore: number;
   publisher: {
     name: string | null;
@@ -47,39 +53,95 @@ export function OpportunityFeed({
   const [token, setToken] = useState<string | null>(null);
   const [opportunities, setOpportunities] = useState(initialOpportunities);
   const [query, setQuery] = useState("");
+  const [workModeFilter, setWorkModeFilter] = useState<"" | "REMOTE" | "HYBRID" | "ONSITE">("");
+  const [locationFilter, setLocationFilter] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [messagingId, setMessagingId] = useState<string | null>(null);
+  const [candidateName, setCandidateName] = useState("");
+  const [reputationPoints, setReputationPoints] = useState(0);
   const [isCurrentlyWorking, setIsCurrentlyWorking] = useState(false);
   const [currentCompany, setCurrentCompany] = useState("");
   const [currentRole, setCurrentRole] = useState("");
   const [description, setDescription] = useState("");
+  const [editingWork, setEditingWork] = useState(false);
+  const [editingDescription, setEditingDescription] = useState(false);
+  const [workDraft, setWorkDraft] = useState({ isCurrentlyWorking: false, company: "", role: "" });
+  const [descriptionDraft, setDescriptionDraft] = useState("");
+  const [savingProfile, setSavingProfile] = useState(false);
 
-          useEffect(() => {
-    // Leemos el token de sesión o el rol guardado para verificar si realmente iniciaste sesión
+  useEffect(() => {
+    // El servidor ya garantiza que solo llegamos aquí con sesión válida (cookie httpOnly).
+    // Solo leemos el token local para efectos de UI (mostrar botones, refrescar el feed).
     const existingToken = window.localStorage.getItem("matchops.session");
-    const savedRole = window.localStorage.getItem("matchops.role");
-
-    // ◄--- CORRECCIÓN DE BUCLE: Si no hay token de sesión Y tampoco hay un rol guardado, recién ahí redirige a /auth
-    if (!existingToken && !savedRole) {
-      window.location.href = "/auth";
-      return;
-    }
 
     if (existingToken) {
       setToken(existingToken);
       refresh(existingToken);
     }
+
+    // Cargamos el perfil real guardado en el servidor (antes se perdía al recargar la página)
+    fetch("/api/auth/me")
+      .then((response) => response.json())
+      .then((data) => {
+        if (!data.user) return;
+        setCandidateName(data.user.name ?? "");
+        setReputationPoints(data.user.reputationPoints ?? 0);
+        setIsCurrentlyWorking(Boolean(data.user.isCurrentlyWorking));
+        setCurrentCompany(data.user.currentCompany ?? "");
+        setCurrentRole(data.user.currentRole ?? "");
+        setDescription(data.user.description ?? "");
+      })
+      .catch(() => {});
   }, []);
 
-
-  // Graba los cambios en la laptop automáticamente cada vez que el usuario escribe
   useEffect(() => {
-    window.localStorage.setItem("matchops.isWorking", String(isCurrentlyWorking));
-    window.localStorage.setItem("matchops.company", currentCompany);
-    window.localStorage.setItem("matchops.role", currentRole);
-  }, [isCurrentlyWorking, currentCompany, currentRole]);
+    if (!token) return;
+    const timeout = setTimeout(() => {
+      refresh(token, { workMode: workModeFilter, location: locationFilter });
+    }, 350);
+    return () => clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workModeFilter, locationFilter, token]);
 
-  async function refresh(sessionToken: string) {
-    const response = await fetch(`/api/opportunities?token=${sessionToken}`);
+  async function saveWorkStatus() {
+    setSavingProfile(true);
+    const payload = {
+      isCurrentlyWorking: workDraft.isCurrentlyWorking,
+      currentCompany: workDraft.isCurrentlyWorking ? workDraft.company : null,
+      currentRole: workDraft.isCurrentlyWorking ? workDraft.role : null
+    };
+    await fetch("/api/auth/update-profile", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    setIsCurrentlyWorking(payload.isCurrentlyWorking);
+    setCurrentCompany(payload.currentCompany ?? "");
+    setCurrentRole(payload.currentRole ?? "");
+    setSavingProfile(false);
+    setEditingWork(false);
+  }
+
+  async function saveDescription() {
+    setSavingProfile(true);
+    await fetch("/api/auth/update-profile", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ description: descriptionDraft })
+    });
+    setDescription(descriptionDraft);
+    setSavingProfile(false);
+    setEditingDescription(false);
+  }
+
+  async function refresh(sessionToken: string, filters?: { workMode?: string; location?: string }) {
+    const params = new URLSearchParams({ token: sessionToken });
+    const activeWorkMode = filters?.workMode ?? workModeFilter;
+    const activeLocation = filters?.location ?? locationFilter;
+    if (activeWorkMode) params.set("workMode", activeWorkMode);
+    if (activeLocation.trim()) params.set("location", activeLocation.trim());
+
+    const response = await fetch(`/api/opportunities?${params.toString()}`);
     const data = await response.json();
     setOpportunities(data.opportunities);
   }
@@ -100,6 +162,23 @@ export function OpportunityFeed({
     });
     await refresh(token);
     setBusyId(null);
+  }
+
+  async function startConversation(opportunityId: string) {
+    setMessagingId(opportunityId);
+    try {
+      const response = await fetch("/api/conversations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ opportunityId })
+      });
+      const data = await response.json();
+      if (response.ok) {
+        window.location.href = `/mensajes?conversationId=${data.conversation.id}`;
+      }
+    } finally {
+      setMessagingId(null);
+    }
   }
 
   const filtered = useMemo(() => {
@@ -150,6 +229,20 @@ export function OpportunityFeed({
         </div>
 
         <div className="flex items-center gap-2">
+          <a
+            href="/postulaciones"
+            className="hidden h-10 items-center justify-center gap-2 rounded-lg border border-line bg-white px-4 text-sm font-semibold text-ink transition hover:bg-mist sm:inline-flex"
+          >
+            <Briefcase size={16} />
+            Mis postulaciones
+          </a>
+          <a
+            href="/mensajes"
+            className="hidden h-10 items-center justify-center gap-2 rounded-lg border border-line bg-white px-4 text-sm font-semibold text-ink transition hover:bg-mist sm:inline-flex"
+          >
+            <MessageCircle size={16} />
+            Mensajes
+          </a>
           {/* Oculta Entrar y Publicar si el usuario ya inició sesión (token activo) */}
           {!token ? (
             <>
@@ -208,133 +301,207 @@ export function OpportunityFeed({
             <span className="text-xs font-bold uppercase tracking-wider text-ink/70">Tu Cuenta Activa</span>
           </div>
 
-          {/* PERFIL DEL CANDIDATO LIMPIO */}
-          <div className="space-y-3">
+          {/* PERFIL DEL CANDIDATO */}
+          <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <div className="grid h-8 w-8 place-items-center rounded-full bg-emerald-100 text-emerald-700 font-bold text-sm">
-                C
+              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-ink text-base font-bold text-white shadow-sm">
+                {candidateName
+                  ? candidateName
+                      .trim()
+                      .split(/\s+/)
+                      .slice(0, 2)
+                      .map((part) => part[0]?.toUpperCase())
+                      .join("")
+                  : "C"}
               </div>
-              <div>
-                <h4 className="text-xs font-bold text-ink">Perfil del Candidato</h4>
-                <p className="text-[10px] text-ink/50">Búsqueda Activa</p>
+              <div className="min-w-0 flex-1">
+                <h4 className="truncate text-sm font-bold text-ink">
+                  {candidateName || "Tu perfil"}
+                </h4>
+                <span className="mt-0.5 inline-flex items-center gap-1 text-[11px] font-semibold text-gold">
+                  <BadgeCheck size={12} />
+                  {reputationPoints} pts de reputación
+                </span>
               </div>
             </div>
 
-            {/* SECCIÓN CORREGIDA: Reemplaza las preguntas por tus textos fijos guardados en localStorage */}
-            <div className="space-y-2 text-xs pt-1 border-t border-line/40">
-      <div className="flex flex-col gap-1 bg-mist/40 p-2 rounded-lg border border-line/50 relative group">
-  <span className="text-ink/60 font-medium text-[11px]">Estado Laboral Actual:</span>
-  <div className="flex items-center justify-between gap-2">
-    <span className={`font-bold ${isCurrentlyWorking ? 'text-blue-600' : 'text-amber-600'}`}>
-      {isCurrentlyWorking ? `Trabajando en: ${currentCompany}` : "Disponible para Trabajar"}
-    </span>
-    
-    {/* EL BOTÓN AHORA ES CONDICIONAL: Solo aparece si realmente necesitas usarlo, no estorba al iniciar sesión */}
-    <button
-      type="button"
-      onClick={async () => {
-        if (isCurrentlyWorking) {
-          const confirmar = window.confirm("¿Tu contrato finalizó? Haz clic en Aceptar para pasar este empleo a tu historial de experiencia.");
-          if (confirmar) {
-            const experienciaPasada = `\n• Ex-${currentRole} en ${currentCompany}.`;
-            const nuevaDesc = description + experienciaPasada;
-            setDescription(nuevaDesc);
-            setIsCurrentlyWorking(false);
-            setCurrentCompany("");
-            setCurrentRole("");
-            window.localStorage.setItem("matchops.description", nuevaDesc);
-            await fetch(`/api/auth/update-profile`, {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ token, isCurrentlyWorking: false, currentCompany: null, currentRole: null, description: nuevaDesc })
-            });
-          }
-        } else {
-          const empresa = prompt("¿En qué empresa empezaste a trabajar?");
-          const cargo = prompt("¿Cuál es tu nuevo cargo / puesto?");
-          if (empresa && cargo) {
-            setIsCurrentlyWorking(true);
-            setCurrentCompany(empresa);
-            setCurrentRole(cargo);
-            await fetch(`/api/auth/update-profile`, {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ token, isCurrentlyWorking: true, currentCompany: empresa, currentRole: cargo })
-            });
-          }
-        }
-      }}
-      className="text-[9px] bg-ink text-white font-bold px-1.5 py-0.5 rounded hover:bg-moss transition-opacity opacity-0 group-hover:opacity-100 shrink-0"
-    >
-      Modificar
-    </button>
-  </div>
-  {isCurrentlyWorking && currentRole && (
-    <span className="text-[10px] text-ink/50 font-medium mt-0.5">
-      Cargo: {currentRole}
-    </span>
-  )}
-</div>
-
-               {/* Si el usuario está laborando, renderiza la empresa y puesto */}
-              {isCurrentlyWorking && (
-                <div className="p-2.5 bg-blue-50/50 rounded-lg border border-blue-100 text-[11px] space-y-1">
-                  <p className="text-ink/70"><strong className="text-ink">Empresa:</strong> {currentCompany || "No especificada"}</p>
-                  <p className="text-ink/70"><strong className="text-ink">Puesto / Cargo:</strong> {currentRole || "No especificado"}</p>
-                </div>
-              )}
-
-              {/* SECCIÓN DINÁMICA DE TU DESCRIPCIÓN REAL */}
-              <div className="mt-3 pt-2.5 border-t border-line/40 space-y-2">
-                <span className="block text-[10px] font-bold text-ink/60 uppercase tracking-wider">Tu Descripción & Logros</span>
-                <div className="bg-gray-50 p-2.5 rounded-lg border border-line/60 text-[11px] text-ink/75 leading-relaxed font-medium">
-                  {description || "Haz clic en el botón de abajo para redactar tu descripción profesional real."}
-                </div>
-                <button 
-                  type="button"
-                  onClick={() => {
-                    const nuevaDesc = prompt("Escribe tu descripción profesional real (Carrera, experiencia, habilidades):", description);
-                    if (nuevaDesc !== null) {
-                      setDescription(nuevaDesc);
-                      window.localStorage.setItem("matchops.description", nuevaDesc);
-                    }
-                  }}
-                  className="w-full text-center text-[11px] font-bold bg-ink text-white py-2 rounded-lg hover:bg-moss transition-colors shadow-sm"
-                >
-                  {!description ? "+ Crear Descripción" : "📝 Editar Descripción"}
-                </button>
+            {/* ESTADO LABORAL */}
+            <div className="rounded-lg border border-line/60 bg-mist/40 p-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-ink/50">
+                  Estado laboral
+                </span>
+                {!editingWork && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setWorkDraft({
+                        isCurrentlyWorking,
+                        company: currentCompany,
+                        role: currentRole
+                      });
+                      setEditingWork(true);
+                    }}
+                    className="text-ink/40 transition hover:text-moss"
+                    title="Editar estado laboral"
+                  >
+                    <Pencil size={13} />
+                  </button>
+                )}
               </div>
 
-              {/* MIS MATCHES ACTIVOS EN TIEMPO REAL */}
-              <div className="mt-3 pt-2.5 border-t border-line/40">
-                <span className="block text-[10px] font-bold text-ink/60 uppercase tracking-wider mb-1.5">
-                  Mis Matches Activos ({initialOpportunities.filter(op => op.matchScore >= 80).slice(0, 3).length})
-                </span>
-                <div className="space-y-1.5">
-                  {initialOpportunities.filter(op => op.matchScore >= 80).slice(0, 3).map((match) => (
-                    <div key={match.id} className="flex items-center justify-between p-2 rounded-lg bg-emerald-50/60 border border-emerald-100 text-[11px] shadow-sm">
-                      <div className="min-w-0 flex-1">
-                        <p className="font-bold text-ink truncate">{match.title}</p>
-                        <p className="text-[10px] text-ink/50 truncate">{match.publisher.name || "Empresa Confidencial"}</p>
-                      </div>
-                      <span className="ml-2 shrink-0 bg-ink text-white font-extrabold px-1.5 py-0.5 rounded text-[9px]">
-                        {match.matchScore}%
-                      </span>
-                    </div>
-                  ))}
-                  {initialOpportunities.filter(op => op.matchScore >= 80).slice(0, 3).length === 0 && (
-                    <p className="text-[11px] text-ink/40 italic bg-gray-50 p-2 rounded border text-center">
-                      Aún no has hecho match con ninguna empresa. ¡Dale a Aplicar!
+              {!editingWork ? (
+                <>
+                  <p className={`mt-1.5 text-sm font-bold ${isCurrentlyWorking ? "text-moss" : "text-gold"}`}>
+                    {isCurrentlyWorking ? "Trabajando actualmente" : "Disponible para trabajar"}
+                  </p>
+                  {isCurrentlyWorking && (currentCompany || currentRole) && (
+                    <p className="mt-1 text-xs text-ink/60">
+                      {currentRole || "Sin cargo especificado"}
+                      {currentCompany ? ` · ${currentCompany}` : ""}
                     </p>
                   )}
+                </>
+              ) : (
+                <div className="mt-2 space-y-2">
+                  <label className="flex items-center gap-2 text-xs font-medium text-ink">
+                    <input
+                      type="checkbox"
+                      checked={workDraft.isCurrentlyWorking}
+                      onChange={(event) =>
+                        setWorkDraft({ ...workDraft, isCurrentlyWorking: event.target.checked })
+                      }
+                      className="h-3.5 w-3.5 rounded border-line text-moss focus:ring-moss"
+                    />
+                    Estoy trabajando actualmente
+                  </label>
+
+                  {workDraft.isCurrentlyWorking && (
+                    <>
+                      <input
+                        value={workDraft.company}
+                        onChange={(event) =>
+                          setWorkDraft({ ...workDraft, company: event.target.value })
+                        }
+                        placeholder="Empresa"
+                        className="h-8 w-full rounded-md border border-line bg-white px-2 text-xs outline-none focus:border-moss"
+                      />
+                      <input
+                        value={workDraft.role}
+                        onChange={(event) => setWorkDraft({ ...workDraft, role: event.target.value })}
+                        placeholder="Cargo / puesto"
+                        className="h-8 w-full rounded-md border border-line bg-white px-2 text-xs outline-none focus:border-moss"
+                      />
+                    </>
+                  )}
+
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={saveWorkStatus}
+                      disabled={savingProfile}
+                      className="inline-flex h-8 flex-1 items-center justify-center gap-1.5 rounded-md bg-ink text-xs font-bold text-white transition hover:bg-moss disabled:opacity-60"
+                    >
+                      {savingProfile ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+                      Guardar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingWork(false)}
+                      className="h-8 rounded-md border border-line px-3 text-xs font-semibold text-ink/60 transition hover:bg-mist"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
                 </div>
+              )}
+            </div>
+
+            {/* DESCRIPCIÓN PROFESIONAL */}
+            <div className="rounded-lg border border-line/60 p-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-ink/50">
+                  Descripción profesional
+                </span>
+                {!editingDescription && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDescriptionDraft(description);
+                      setEditingDescription(true);
+                    }}
+                    className="text-ink/40 transition hover:text-moss"
+                    title="Editar descripción"
+                  >
+                    <Pencil size={13} />
+                  </button>
+                )}
+              </div>
+
+              {!editingDescription ? (
+                <p className="mt-1.5 text-xs leading-relaxed text-ink/70">
+                  {description || "Aún no has escrito tu descripción profesional. Cuéntale a las empresas sobre tu experiencia y habilidades."}
+                </p>
+              ) : (
+                <div className="mt-2 space-y-2">
+                  <textarea
+                    value={descriptionDraft}
+                    onChange={(event) => setDescriptionDraft(event.target.value)}
+                    rows={4}
+                    placeholder="Carrera, experiencia, habilidades..."
+                    className="w-full resize-none rounded-md border border-line px-2 py-1.5 text-xs leading-relaxed outline-none focus:border-moss"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={saveDescription}
+                      disabled={savingProfile}
+                      className="inline-flex h-8 flex-1 items-center justify-center gap-1.5 rounded-md bg-ink text-xs font-bold text-white transition hover:bg-moss disabled:opacity-60"
+                    >
+                      {savingProfile ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+                      Guardar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingDescription(false)}
+                      className="h-8 rounded-md border border-line px-3 text-xs font-semibold text-ink/60 transition hover:bg-mist"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* MIS MATCHES ACTIVOS EN TIEMPO REAL */}
+            <div className="border-t border-line/40 pt-3">
+              <span className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-ink/50">
+                Mis Matches Activos ({initialOpportunities.filter(op => op.matchScore >= 80).slice(0, 3).length})
+              </span>
+              <div className="space-y-1.5">
+                {initialOpportunities.filter(op => op.matchScore >= 80).slice(0, 3).map((match) => (
+                  <div key={match.id} className="flex items-center justify-between p-2 rounded-lg bg-moss/8 border border-moss/20 text-[11px] shadow-sm">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-bold text-ink truncate">{match.title}</p>
+                      <p className="text-[10px] text-ink/50 truncate">{match.publisher.name || "Empresa Confidencial"}</p>
+                    </div>
+                    <span className="ml-2 shrink-0 bg-ink text-white font-extrabold px-1.5 py-0.5 rounded text-[9px]">
+                      {match.matchScore}%
+                    </span>
+                  </div>
+                ))}
+                {initialOpportunities.filter(op => op.matchScore >= 80).slice(0, 3).length === 0 && (
+                  <p className="text-[11px] text-ink/40 italic bg-mist p-2 rounded border border-line text-center">
+                    Aún no has hecho match con ninguna empresa. ¡Dale a Aplicar!
+                  </p>
+                )}
               </div>
             </div>
 
-            <div className="rounded-lg bg-gray-50 p-2 border border-line mt-2">
+            <div className="rounded-lg bg-mist p-2 border border-line">
               <div className="flex items-center justify-between text-[11px]">
                 <span className="text-ink/60 font-medium">Calibración de Intereses:</span>
-                <span className="font-bold text-emerald-600 animate-pulse">● Activo</span>
+                <span className="font-bold text-moss animate-pulse">● Activo</span>
               </div>
             </div>
           </div>
@@ -355,6 +522,27 @@ export function OpportunityFeed({
   className="h-11 w-full bg-transparent text-sm outline-none text-ink"
   placeholder="Ej. React, Python, Remoto..."
 />
+          </div>
+
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <select
+              value={workModeFilter}
+              onChange={(event) =>
+                setWorkModeFilter(event.target.value as typeof workModeFilter)
+              }
+              className="h-10 rounded-lg border border-line bg-white px-2.5 text-sm text-ink outline-none focus:border-moss"
+            >
+              <option value="">Toda modalidad</option>
+              <option value="REMOTE">Remoto</option>
+              <option value="HYBRID">Híbrido</option>
+              <option value="ONSITE">Presencial</option>
+            </select>
+            <input
+              value={locationFilter}
+              onChange={(event) => setLocationFilter(event.target.value)}
+              placeholder="Ubicación"
+              className="h-10 rounded-lg border border-line bg-white px-2.5 text-sm text-ink outline-none focus:border-moss"
+            />
           </div>
         </div>
 
@@ -436,13 +624,13 @@ export function OpportunityFeed({
                       </span>
                     </div>
 
-                    <p className="mt-4 text-sm leading-relaxed text-ink/75">
+                    <p className="mt-4 text-sm leading-relaxed text-ink/75 line-clamp-3">
                       {opportunity.description}
                     </p>
 
                     {opportunity.tags && opportunity.tags.length > 0 && (
                       <div className="mt-4 flex flex-wrap gap-2">
-                        {opportunity.tags.map((tag, idx) => (
+                        {opportunity.tags.slice(0, 6).map((tag, idx) => (
                           <span
                             key={idx}
                             className="rounded-full bg-moss/10 px-3 py-1 text-xs font-medium text-moss"
@@ -450,6 +638,11 @@ export function OpportunityFeed({
                             #{tag.toLowerCase()}
                           </span>
                         ))}
+                        {opportunity.tags.length > 6 && (
+                          <span className="rounded-full bg-mist px-3 py-1 text-xs font-medium text-ink/50">
+                            +{opportunity.tags.length - 6} más
+                          </span>
+                        )}
                       </div>
                     )}
 
@@ -458,6 +651,18 @@ export function OpportunityFeed({
                         <DollarSign size={15} />
                         {opportunity.compensation}
                       </div>
+                    )}
+
+                    {opportunity.applicationUrl && (
+                      <a
+                        href={opportunity.applicationUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-moss hover:text-ink hover:underline"
+                      >
+                        <ExternalLink size={14} />
+                        Ver más detalles / postular en el sitio
+                      </a>
                     )}
                   </div>
 
@@ -484,6 +689,20 @@ export function OpportunityFeed({
                       disabled={busyId === opportunity.id}
                     >
                       <Bookmark size={18} />
+                    </button>
+
+                    <button
+                      type="button"
+                      title="Enviar mensaje"
+                      onClick={() => startConversation(opportunity.id)}
+                      className="grid h-11 w-11 place-items-center rounded-lg border border-line bg-white text-moss transition hover:bg-moss/5 hover:border-moss shadow-sm"
+                      disabled={messagingId === opportunity.id}
+                    >
+                      {messagingId === opportunity.id ? (
+                        <Loader2 size={18} className="animate-spin" />
+                      ) : (
+                        <MessageCircle size={18} />
+                      )}
                     </button>
 
                     <button

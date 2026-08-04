@@ -11,7 +11,14 @@ const opportunitySchema = z.object({
   workMode: z.nativeEnum(WorkMode),
   location: z.string().optional(),
   contractType: z.string().min(3),
-  compensation: z.string().optional()
+  compensation: z.string().optional(),
+  applicationUrl: z
+    .string()
+    .trim()
+    .refine((value) => value === "" || z.string().url().safeParse(value).success, {
+      message: "El enlace debe ser una URL válida (ej. https://...)"
+    })
+    .optional()
 });
 
 export async function GET() {
@@ -61,6 +68,7 @@ export async function POST(request: NextRequest) {
       location: body.location || null,
       contractType: body.contractType,
       compensation: body.compensation || null,
+      applicationUrl: body.applicationUrl || null,
       status: OpportunityStatus.ACTIVE,
       publisherId: publisher.id
     }

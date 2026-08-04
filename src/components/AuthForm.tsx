@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { ArrowRight, Loader2 } from "lucide-react";
+import { ArrowRight, Loader2, Sparkles, Target, ShieldCheck, Zap } from "lucide-react";
 
 type Mode = "login" | "register";
 type Role = "CANDIDATE" | "PUBLISHER";
@@ -68,15 +68,56 @@ export function AuthForm() {
   }
 
   return (
-    <main className="grid min-h-screen place-items-center bg-mist/90 px-4 py-8">
-      <section className="w-full max-w-md rounded-lg border border-line bg-white p-5 shadow-soft">
-        <div className="mb-5">
-          <p className="text-sm font-medium text-moss">MatchOps</p>
-          <h1 className="mt-1 text-2xl font-semibold text-ink">
-            {mode === "login" ? "Ingresar" : "Crear cuenta"}
-          </h1>
+    <main className="grid min-h-screen lg:grid-cols-2">
+      {/* PANEL LATERAL DECORATIVO */}
+      <div className="relative hidden overflow-hidden bg-ink px-10 py-12 text-white lg:flex lg:flex-col lg:justify-between">
+        <div
+          className="pointer-events-none absolute inset-0 opacity-40"
+          style={{
+            background:
+              "radial-gradient(circle at 20% 20%, rgba(110,168,216,0.35), transparent 45%), radial-gradient(circle at 80% 70%, rgba(59,130,196,0.35), transparent 50%)"
+          }}
+        />
+        <div className="relative flex items-center gap-3">
+          <div className="grid h-10 w-10 place-items-center rounded-lg bg-white/10 backdrop-blur">
+            <Sparkles size={20} />
+          </div>
+          <p className="text-lg font-bold tracking-tight">MatchOps</p>
         </div>
-;
+
+        <div className="relative">
+          <h2 className="max-w-sm text-3xl font-extrabold leading-tight tracking-tight">
+            El match correcto entre talento y oportunidad
+          </h2>
+          <p className="mt-3 max-w-sm text-sm leading-relaxed text-white/70">
+            Miles de candidatos y empresas ya usan MatchOps para encontrarse más rápido.
+          </p>
+
+          <div className="mt-8 space-y-4">
+            <SidePoint icon={Target} text="Matching inteligente según tus intereses reales" />
+            <SidePoint icon={Zap} text="Postulación en un clic, sin fricciones" />
+            <SidePoint icon={ShieldCheck} text="Reputación transparente para ambas partes" />
+          </div>
+        </div>
+
+        <p className="relative text-xs text-white/40">© {new Date().getFullYear()} MatchOps</p>
+      </div>
+
+      {/* PANEL DEL FORMULARIO */}
+      <div className="grid place-items-center bg-mist px-4 py-10">
+      <section className="w-full max-w-md rounded-xl border border-line bg-white p-6 shadow-soft">
+        <div className="mb-5">
+          <p className="text-sm font-semibold text-moss">MatchOps</p>
+          <h1 className="mt-1 text-2xl font-bold text-ink tracking-tight">
+            {mode === "login" ? "Bienvenido de nuevo" : "Crea tu cuenta"}
+          </h1>
+          <p className="mt-1 text-sm text-ink/55">
+            {mode === "login"
+              ? "Ingresa para ver tus oportunidades."
+              : "Empieza a recibir matches en minutos."}
+          </p>
+        </div>
+
         <div className="mb-4 grid grid-cols-2 rounded-lg border border-line bg-mist p-1">
           <button
             type="button"
@@ -225,6 +266,24 @@ export function AuthForm() {
           </button>
         </form>
       </section>
+      </div>
     </main>
+  );
+}
+
+function SidePoint({
+  icon: Icon,
+  text
+}: {
+  icon: typeof Target;
+  text: string;
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white/10">
+        <Icon size={16} />
+      </div>
+      <p className="text-sm text-white/80">{text}</p>
+    </div>
   );
 }

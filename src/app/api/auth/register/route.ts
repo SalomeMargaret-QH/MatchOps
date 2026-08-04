@@ -14,7 +14,8 @@ const schema = z.object({
   anonymousToken: z.string().optional(),
   // Nuevos campos opcionales validados
   isCurrentlyWorking: z.boolean().optional(),
-  currentCompany: z.string().optional()
+  currentCompany: z.string().optional(),
+  currentRole: z.string().optional()
 });
 
 export async function POST(request: NextRequest) {
@@ -39,7 +40,8 @@ export async function POST(request: NextRequest) {
         reputationPoints: body.role === "PUBLISHER" ? 25 : 0,
         // GUARDANDO LOS NUEVOS CAMPOS EN LA BASE DE DATOS
         isCurrentlyWorking: body.isCurrentlyWorking ?? false,
-        currentCompany: body.isCurrentlyWorking ? body.currentCompany : null
+        currentCompany: body.isCurrentlyWorking ? body.currentCompany : null,
+        currentRole: body.isCurrentlyWorking ? body.currentRole : null
       }
     });
 
