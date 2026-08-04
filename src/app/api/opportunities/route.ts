@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { OpportunityStatus } from "@prisma/client";
+import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { calculateMatchScore } from "@/lib/matching";
 
@@ -12,12 +13,7 @@ export async function GET(request: NextRequest) {
   const location = request.nextUrl.searchParams.get("location");
   const contractType = request.nextUrl.searchParams.get("contractType");
 
-  const session = token
-    ? await prisma.anonymousSession.findUnique({
-        where: { token },
-        include: { implicitProfile: true }
-      })
-    : null;
+  const currentUser = await getCurrentUser();
 
   const opportunities = await prisma.opportunity.findMany({
     where: {
@@ -43,16 +39,55 @@ export async function GET(request: NextRequest) {
   const page = hasMore ? opportunities.slice(0, PAGE_SIZE) : opportunities;
   const nextCursor = hasMore ? page[page.length - 1].id : null;
 
-  const profile = session?.implicitProfile
-  ? {
-      profile: {
-        interests: session.implicitProfile.interests,
-        skills: session.implicitProfile.skills,
-        preferredWorkMode: session.implicitProfile.preferredWorkMode,
-        location: null
-      }
-    }
-  : null;
+  let matchInput: {
+    isCurrentlyWorking?: boolean | null;
+    currentCompany?: string | null;
+    profile?: {
+      interests: string[];
+      skills: string[];
+      preferredWorkMode: import("@prisma/client").WorkMode | null;
+      location: string | null;
+    } | null;
+  } | null = null;
+
+  if (currentUser) {
+    const [fullUser, implicitProfile] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: currentUser.id },
+        select: { isCurrentlyWorking: true, currentCompany: true }
+      }),
+      prisma.implicitProfile.findUnique({ where: { userId: currentUser.id } })
+    ]);
+
+    matchInput = {
+      isCurrentlyWorking: fullUser?.isCurrentlyWorking,
+      currentCompany: fullUser?.currentCompany,
+      profile: implicitProfile
+        ? {
+            interests: implicitProfile.interests,
+            skills: implicitProfile.skills,
+            preferredWorkMode: implicitProfile.preferredWorkMode,
+            location: null
+          }
+        : null
+    };
+  } else if (token) {
+    const session = await prisma.anonymousSession.findUnique({
+      where: { token },
+      include: { implicitProfile: true }
+    });
+
+    matchInput = session?.implicitProfile
+      ? {
+          profile: {
+            interests: session.implicitProfile.interests,
+            skills: session.implicitProfile.skills,
+            preferredWorkMode: session.implicitProfile.preferredWorkMode,
+            location: null
+          }
+        }
+      : null;
+  }
 
 const payload = page
   .map((opportunity) => ({
@@ -67,7 +102,7 @@ const payload = page
     applicationUrl: opportunity.applicationUrl,
     publisher: opportunity.publisher,
     createdAt: opportunity.createdAt,
-    matchScore: calculateMatchScore(opportunity, profile)
+    matchScore: calculateMatchScore(opportunity, matchInput)
   }))
   .sort((a, b) => b.matchScore - a.matchScore);
 

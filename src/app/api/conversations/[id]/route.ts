@@ -33,6 +33,11 @@ export async function GET(
   const otherParty =
     conversation.candidateId === user.id ? conversation.publisher : conversation.candidate;
 
+  await prisma.message.updateMany({
+    where: { conversationId: conversation.id, receiverId: user.id, readAt: null },
+    data: { readAt: new Date() }
+  });
+
   return NextResponse.json({
     conversation: {
       id: conversation.id,

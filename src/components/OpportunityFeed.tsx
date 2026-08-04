@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { NotificationCenter } from "@/components/NotificationCenter";
 import {
   Bookmark,
   Check,
@@ -147,20 +148,18 @@ export function OpportunityFeed({
   }
 
   async function interact(opportunityId: string, type: "ACCEPT" | "IGNORE" | "SAVE") {
-    if (!token) return;
-
     setBusyId(opportunityId);
     await fetch("/api/interactions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        token,
+        ...(token ? { token } : {}),
         opportunityId,
         type,
         dwellTimeSeconds: 4
       })
     });
-    await refresh(token);
+    await refresh(token ?? "");
     setBusyId(null);
   }
 
@@ -229,6 +228,7 @@ export function OpportunityFeed({
         </div>
 
         <div className="flex items-center gap-2">
+          <NotificationCenter />
           <a
             href="/postulaciones"
             className="hidden h-10 items-center justify-center gap-2 rounded-lg border border-line bg-white px-4 text-sm font-semibold text-ink transition hover:bg-mist sm:inline-flex"
@@ -609,9 +609,11 @@ export function OpportunityFeed({
                       )}
                     </div>
 
-                    <h2 className="mt-3.5 text-xl font-bold text-ink tracking-tight hover:text-moss transition cursor-pointer">
-                      {opportunity.title}
-                    </h2>
+                    <a href={`/oportunidad/${opportunity.id}`}>
+                      <h2 className="mt-3.5 text-xl font-bold text-ink tracking-tight hover:text-moss transition cursor-pointer">
+                        {opportunity.title}
+                      </h2>
+                    </a>
                     
                     <div className="mt-1 flex items-center gap-4 text-xs text-ink/50">
                       <span className="inline-flex items-center gap-1 font-medium">

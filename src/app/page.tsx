@@ -33,19 +33,39 @@ export default async function Home() {
     );
   }
 
-  const opportunities = await prisma.opportunity.findMany({
-    where: { status: OpportunityStatus.ACTIVE },
-    take: 20,
-    include: {
-      publisher: {
-        select: {
-          name: true,
-          reputationPoints: true
+  const [opportunities, fullUser, implicitProfile] = await Promise.all([
+    prisma.opportunity.findMany({
+      where: { status: OpportunityStatus.ACTIVE },
+      take: 20,
+      include: {
+        publisher: {
+          select: {
+            name: true,
+            reputationPoints: true
+          }
         }
-      }
-    },
-    orderBy: { createdAt: "desc" }
-  });
+      },
+      orderBy: { createdAt: "desc" }
+    }),
+    prisma.user.findUnique({
+      where: { id: user.id },
+      select: { isCurrentlyWorking: true, currentCompany: true }
+    }),
+    prisma.implicitProfile.findUnique({ where: { userId: user.id } })
+  ]);
+
+  const matchInput = {
+    isCurrentlyWorking: fullUser?.isCurrentlyWorking,
+    currentCompany: fullUser?.currentCompany,
+    profile: implicitProfile
+      ? {
+          interests: implicitProfile.interests,
+          skills: implicitProfile.skills,
+          preferredWorkMode: implicitProfile.preferredWorkMode,
+          location: null
+        }
+      : null
+  };
 
   const payload = opportunities.map((opportunity) => ({
     id: opportunity.id,
@@ -59,7 +79,7 @@ export default async function Home() {
     applicationUrl: opportunity.applicationUrl,
     publisher: opportunity.publisher,
     createdAt: opportunity.createdAt.toISOString(),
-    matchScore: calculateMatchScore(opportunity)
+    matchScore: calculateMatchScore(opportunity, matchInput)
   }));
 
   return <OpportunityFeed initialOpportunities={payload} />;

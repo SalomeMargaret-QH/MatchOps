@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { NotificationCenter } from "@/components/NotificationCenter";
 import {
   Archive,
   BriefcaseBusiness,
@@ -253,6 +254,7 @@ export function PublisherDashboard() {
           >
             Ver feed
           </a>
+          <NotificationCenter />
           <a
             href="/mensajes"
             className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-line px-4 text-sm font-medium text-ink transition hover:border-moss hover:text-moss"
