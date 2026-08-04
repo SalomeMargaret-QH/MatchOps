@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { UserRole } from "@prisma/client";
 import { z } from "zod";
+import { withValidation } from "@/lib/api-handler";
 import { createAuthSession } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { hashPassword } from "@/lib/password";
@@ -18,8 +19,7 @@ const schema = z.object({
   currentRole: z.string().optional()
 });
 
-export async function POST(request: NextRequest) {
-  const body = schema.parse(await request.json());
+export const POST = withValidation(schema, async (body) => {
   const email = body.email.toLowerCase();
 
   const existing = await prisma.user.findUnique({ where: { email } });
@@ -87,4 +87,4 @@ export async function POST(request: NextRequest) {
       role: user.role
     }
   });
-}
+});

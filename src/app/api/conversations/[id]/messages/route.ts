@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { parseJsonWithSchema } from "@/lib/api-handler";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
@@ -19,7 +20,9 @@ export async function POST(
     );
   }
 
-  const { body } = schema.parse(await request.json());
+  const parsed = await parseJsonWithSchema(request, schema);
+  if ("response" in parsed) return parsed.response;
+  const { body } = parsed.data;
 
   const conversation = await prisma.conversation.findFirst({
     where: { id, OR: [{ candidateId: user.id }, { publisherId: user.id }] }

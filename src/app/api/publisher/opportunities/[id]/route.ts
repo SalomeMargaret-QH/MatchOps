@@ -3,6 +3,7 @@ import { OpportunityStatus, WorkMode } from "@prisma/client";
 import { z } from "zod";
 import { canPublish, getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { parseJsonWithSchema } from "@/lib/api-handler";
 
 const schema = z.object({
   status: z.enum(["ACTIVE", "PAUSED", "ARCHIVED"]).optional(),
@@ -27,7 +28,11 @@ export async function PATCH(
   context: { params: Promise<{ id: string }> }
 ) {
   const { id } = await context.params;
-  const body = schema.parse(await request.json());
+
+  const parsed = await parseJsonWithSchema(request, schema);
+  if ("response" in parsed) return parsed.response;
+  const body = parsed.data;
+
   const user = await getCurrentUser();
 
   if (!user || !canPublish(user.role)) {

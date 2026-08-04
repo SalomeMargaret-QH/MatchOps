@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { InteractionType } from "@prisma/client";
 import { z } from "zod";
+import { withValidation } from "@/lib/api-handler";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { updateProfileSignals } from "@/lib/matching";
@@ -12,8 +13,7 @@ const schema = z.object({
   dwellTimeSeconds: z.number().int().nonnegative().optional()
 });
 
-export async function POST(request: NextRequest) {
-  const body = schema.parse(await request.json());
+export const POST = withValidation(schema, async (body) => {
   const user = await getCurrentUser();
 
   const opportunity = await prisma.opportunity.findUnique({
@@ -102,4 +102,4 @@ export async function POST(request: NextRequest) {
   });
 
   return NextResponse.json({ ok: true });
-}
+});

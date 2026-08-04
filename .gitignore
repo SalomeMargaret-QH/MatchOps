@@ -4,3 +4,10 @@ dist
 .env
 *.log
 prisma/*.db
+
+# Cache de npm: NUNCA debe commitearse (antes infló el repo a 944 MB)
+.npm-cache
+
+# Reportes de pruebas de carga: son artefactos, no código fuente
+reporte-k6*.json
+coverage

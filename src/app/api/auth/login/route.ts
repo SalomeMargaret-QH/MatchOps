@@ -1,29 +1,30 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { z } from "zod";
+import { withValidation } from "@/lib/api-handler";
 import { createAuthSession } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { verifyPassword } from "@/lib/password";
+import { DUMMY_HASH_FOR_TIMING, verifyPassword } from "@/lib/password";
 
 const schema = z.object({
   email: z.string().email(),
   password: z.string().min(1)
 });
 
-export async function POST(request: NextRequest) {
-  const body = schema.parse(await request.json());
+export const POST = withValidation(schema, async (body) => {
   const user = await prisma.user.findUnique({
     where: { email: body.email.toLowerCase() }
   });
 
-  if (!user?.passwordHash) {
-    return NextResponse.json(
-      { error: "Correo o contraseña incorrectos." },
-      { status: 401 }
-    );
-  }
+  // Siempre corremos scrypt, exista o no el usuario, y sea o no válida la
+  // contraseña, para que ambos casos tomen el mismo tiempo. Si no se
+  // hiciera, un atacante podría medir el tiempo de respuesta para saber
+  // qué correos están registrados (email enumeration por timing).
+  const valid = await verifyPassword(
+    body.password,
+    user?.passwordHash ?? DUMMY_HASH_FOR_TIMING
+  );
 
-  const valid = await verifyPassword(body.password, user.passwordHash);
-  if (!valid) {
+  if (!user?.passwordHash || !valid) {
     return NextResponse.json(
       { error: "Correo o contraseña incorrectos." },
       { status: 401 }
@@ -40,4 +41,4 @@ export async function POST(request: NextRequest) {
       role: user.role
     }
   });
-}
+});

@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { OpportunityStatus, WorkMode } from "@prisma/client";
 import { z } from "zod";
+import { withErrorHandling, withValidation } from "@/lib/api-handler";
 import { canPublish, getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
@@ -21,7 +22,7 @@ const opportunitySchema = z.object({
     .optional()
 });
 
-export async function GET() {
+export const GET = withErrorHandling(async () => {
   const publisher = await getCurrentUser();
 
   if (!publisher || !canPublish(publisher.role)) {
@@ -46,10 +47,9 @@ export async function GET() {
   });
 
   return NextResponse.json({ publisher, opportunities });
-}
+});
 
-export async function POST(request: NextRequest) {
-  const body = opportunitySchema.parse(await request.json());
+export const POST = withValidation(opportunitySchema, async (body) => {
   const publisher = await getCurrentUser();
 
   if (!publisher || !canPublish(publisher.role)) {
@@ -75,4 +75,4 @@ export async function POST(request: NextRequest) {
   });
 
   return NextResponse.json({ opportunity }, { status: 201 });
-}
+});

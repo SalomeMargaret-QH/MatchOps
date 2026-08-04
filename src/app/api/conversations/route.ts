@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { parseJsonWithSchema } from "@/lib/api-handler";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
@@ -51,7 +52,9 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { opportunityId, candidateId } = createSchema.parse(await request.json());
+  const parsed = await parseJsonWithSchema(request, createSchema);
+  if ("response" in parsed) return parsed.response;
+  const { opportunityId, candidateId } = parsed.data;
 
   const opportunity = await prisma.opportunity.findUnique({
     where: { id: opportunityId },
