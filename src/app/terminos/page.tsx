@@ -1,40 +1,75 @@
-export default function TerminosCondiciones() {
+import { ArrowLeft } from "lucide-react";
+
+export const metadata = { title: "Términos y condiciones" };
+
+export default function TerminosPage() {
   return (
-    <main className="max-w-4xl mx-auto p-6 py-10">
-      <h1 className="text-2xl font-bold mb-4">Términos y Condiciones de Uso</h1>
-      <p className="text-gray-600 mb-6">Última actualización: 4 de agosto de 2026</p>
+    <main className="min-h-screen bg-mist px-4 py-10 sm:px-6">
+      <div className="mx-auto max-w-2xl rounded-xl border border-line bg-white p-6 shadow-soft sm:p-8">
+        <a href="/" className="inline-flex items-center gap-1.5 text-sm font-semibold text-ink/60 hover:text-moss">
+          <ArrowLeft size={15} />
+          Volver a MatchOps
+        </a>
 
-      <section className="space-y-6 text-gray-700">
-        <div>
-          <h2 className="text-xl font-semibold mb-2 text-gray-900">1. Objeto</h2>
-          <p>MatchOps es una plataforma que conecta personas que buscan oportunidades laborales con quienes las ofrecen. Al acceder y usar el sitio, aceptas cumplir con estos términos y todas las normativas aplicables en Perú.</p>
-        </div>
+        <h1 className="mt-4 text-2xl font-bold text-ink">Términos y condiciones</h1>
+        <p className="mt-1 text-xs text-ink/50">Última actualización: {new Date().toLocaleDateString("es-PE", { year: "numeric", month: "long" })}</p>
 
-        <div>
-          <h2 className="text-xl font-semibold mb-2 text-gray-900">2. Uso permitido</h2>
-          <p>Te comprometes a utilizar la plataforma solo con fines legales y lícitos. Queda prohibido publicar información falsa, engañosa, ofensiva o que viole derechos de terceros.</p>
-        </div>
+        <div className="mt-6 space-y-5 text-sm leading-relaxed text-ink/75">
+          <section>
+            <h2 className="mb-1.5 text-base font-bold text-ink">1. Sobre MatchOps</h2>
+            <p>
+              MatchOps es una plataforma que conecta candidatos con oportunidades laborales
+              publicadas por terceros. Actuamos como intermediarios tecnológicos; no somos
+              empleadores ni garantizamos la veracidad de cada oferta publicada por un
+              publicador externo.
+            </p>
+          </section>
 
-        <div>
-          <h2 className="text-xl font-semibold mb-2 text-gray-900">3. Cuentas de usuario</h2>
-          <p>Eres responsable de mantener la confidencialidad de tus credenciales de acceso. Debes proporcionar información veraz al registrarte.</p>
-        </div>
+          <section>
+            <h2 className="mb-1.5 text-base font-bold text-ink">2. Cuentas de usuario</h2>
+            <p>
+              Eres responsable de mantener la confidencialidad de tu cuenta y de la exactitud
+              de la información que compartes en tu perfil. Nos reservamos el derecho de
+              suspender cuentas que proporcionen información falsa o hagan un uso indebido de
+              la plataforma.
+            </p>
+          </section>
 
-        <div>
-          <h2 className="text-xl font-semibold mb-2 text-gray-900">4. Contenido publicado</h2>
-          <p>Los publicadores garantizan la veracidad de las oportunidades que comparten. MatchOps no garantiza la contratación ni la verificación absoluta de la información publicada por usuarios.</p>
-        </div>
+          <section>
+            <h2 className="mb-1.5 text-base font-bold text-ink">3. Publicación de ofertas</h2>
+            <p>
+              Los publicadores son responsables del contenido de sus ofertas y de cumplir con
+              la legislación laboral vigente. MatchOps puede retirar publicaciones que
+              incumplan estos términos o resulten engañosas.
+            </p>
+          </section>
 
-        <div>
-          <h2 className="text-xl font-semibold mb-2 text-gray-900">5. Modificaciones</h2>
-          <p>Podemos modificar estos términos en cualquier momento; los cambios entran en vigor al publicarse en la plataforma.</p>
-        </div>
+          <section>
+            <h2 className="mb-1.5 text-base font-bold text-ink">4. Uso aceptable</h2>
+            <p>
+              No está permitido usar la plataforma para spam, acoso, discriminación,
+              recolección masiva de datos de otros usuarios, ni para publicar ofertas
+              fraudulentas.
+            </p>
+          </section>
 
-        <div>
-          <h2 className="text-xl font-semibold mb-2 text-gray-900">6. Ley aplicable</h2>
-          <p>Estos términos se rigen por las leyes de la República del Perú. Cualquier controversia se resolverá en los juzgados de Arequipa.</p>
+          <section>
+            <h2 className="mb-1.5 text-base font-bold text-ink">5. Cambios en el servicio</h2>
+            <p>
+              Podemos modificar o discontinuar funciones de la plataforma en cualquier
+              momento. Notificaremos cambios relevantes en estos términos cuando corresponda.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="mb-1.5 text-base font-bold text-ink">6. Contacto</h2>
+            <p>
+              Para consultas sobre estos términos, puedes escribirnos a través de los canales
+              de contacto disponibles en la plataforma.
+            </p>
+          </section>
         </div>
-      </section>
+      </div>
     </main>
   );
 }

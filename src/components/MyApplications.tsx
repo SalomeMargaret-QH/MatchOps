@@ -82,10 +82,17 @@ export function MyApplications() {
           )}
 
           {!error && applications === null && (
-            <p className="flex items-center gap-2 text-sm text-ink/60">
-              <Loader2 size={15} className="animate-spin" />
-              Cargando tus postulaciones...
-            </p>
+            <div className="space-y-3">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="animate-pulse rounded-xl border border-line bg-white p-5">
+                  <div className="h-4 w-24 rounded bg-line" />
+                  <div className="mt-3 h-5 w-2/3 rounded bg-line" />
+                  <div className="mt-2 h-3 w-1/3 rounded bg-line/70" />
+                  <div className="mt-4 h-3 w-full rounded bg-line/50" />
+                  <div className="mt-1.5 h-3 w-4/5 rounded bg-line/50" />
+                </div>
+              ))}
+            </div>
           )}
 
           {applications?.length === 0 && (

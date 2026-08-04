@@ -221,6 +221,15 @@ export function Landing({ preview }: { preview: PreviewOpportunity[] }) {
           </a>
         </div>
       </section>
+
+      <footer className="border-t border-line py-6 text-center text-xs text-ink/45">
+        <p>© {new Date().getFullYear()} MatchOps</p>
+        <div className="mt-1.5 flex items-center justify-center gap-3">
+          <a href="/terminos" className="hover:text-moss hover:underline">Términos y condiciones</a>
+          <span>·</span>
+          <a href="/privacidad" className="hover:text-moss hover:underline">Privacidad</a>
+        </div>
+      </footer>
     </main>
   );
 }

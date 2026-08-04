@@ -265,6 +265,14 @@ export function AuthForm() {
             Continuar
           </button>
         </form>
+
+        {mode === "register" && (
+          <p className="mt-3 text-center text-[11px] text-ink/45">
+            Al crear una cuenta aceptas nuestros{" "}
+            <a href="/terminos" className="underline hover:text-moss">Términos</a> y nuestra{" "}
+            <a href="/privacidad" className="underline hover:text-moss">Política de privacidad</a>.
+          </p>
+        )}
       </section>
       </div>
     </main>

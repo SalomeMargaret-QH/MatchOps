@@ -570,10 +570,22 @@ export function PublisherDashboard() {
               {selectedOpportunityId === opportunity.id && (
                 <div className="mt-3 space-y-2 rounded-lg border border-line bg-mist/50 p-3">
                   {loadingApplicantsId === opportunity.id ? (
-                    <p className="flex items-center gap-2 text-sm text-ink/60">
-                      <Loader2 size={15} className="animate-spin" />
-                      Cargando postulantes...
-                    </p>
+                    <div className="space-y-2">
+                      {[0, 1].map((i) => (
+                        <div
+                          key={i}
+                          className="animate-pulse rounded-lg border border-line bg-white p-3"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-full bg-line" />
+                            <div className="flex-1 space-y-1.5">
+                              <div className="h-3 w-1/3 rounded bg-line" />
+                              <div className="h-2.5 w-1/2 rounded bg-line/70" />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   ) : (applicantsByOpportunity[opportunity.id]?.length ?? 0) === 0 ? (
                     <p className="text-sm text-ink/50">
                       Todavía nadie ha postulado a esta oferta.

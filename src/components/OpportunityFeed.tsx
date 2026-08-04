@@ -54,6 +54,7 @@ export function OpportunityFeed({
   const [token, setToken] = useState<string | null>(null);
   const [opportunities, setOpportunities] = useState(initialOpportunities);
   const [query, setQuery] = useState("");
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const [workModeFilter, setWorkModeFilter] = useState<"" | "REMOTE" | "HYBRID" | "ONSITE">("");
   const [locationFilter, setLocationFilter] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -93,6 +94,10 @@ export function OpportunityFeed({
         setDescription(data.user.description ?? "");
       })
       .catch(() => {});
+
+    if (!window.localStorage.getItem("matchops.onboarded")) {
+      setShowOnboarding(true);
+    }
   }, []);
 
   useEffect(() => {
@@ -200,6 +205,20 @@ export function OpportunityFeed({
 
   const bestMatch = filtered[0];
 
+  const popularTags = useMemo(() => {
+    const counts = new Map<string, number>();
+    opportunities.forEach((opportunity) => {
+      opportunity.tags.forEach((tag) => {
+        const normalized = tag.toLowerCase();
+        counts.set(normalized, (counts.get(normalized) ?? 0) + 1);
+      });
+    });
+    return [...counts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+      .map(([tag]) => tag);
+  }, [opportunities]);
+
   const getScoreColor = (score: number) => {
     if (score >= 80) return "bg-moss text-white";
     if (score >= 50) return "bg-ink text-white";
@@ -292,6 +311,35 @@ export function OpportunityFeed({
         </div>
       </div>
     </header>
+
+    {showOnboarding && (
+      <div className="mx-auto mt-4 max-w-7xl px-4 sm:px-6">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-moss/25 bg-moss/8 p-4">
+          <div className="flex items-start gap-3">
+            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-ink text-white">
+              <Sparkles size={17} />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-ink">¡Bienvenido a MatchOps!</p>
+              <p className="mt-0.5 text-xs text-ink/60">
+                Dale "Aplicar", "Guardar" o pasa las ofertas que no te interesan — mientras
+                más interactúes, mejor calibramos tu porcentaje de match.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              window.localStorage.setItem("matchops.onboarded", "true");
+              setShowOnboarding(false);
+            }}
+            className="shrink-0 rounded-lg bg-ink px-4 py-2 text-xs font-bold text-white transition hover:bg-moss"
+          >
+            Entendido
+          </button>
+        </div>
+      </div>
+    )}
 
     <section className="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[320px_1fr]">
       <aside className="space-y-4">
@@ -544,6 +592,25 @@ export function OpportunityFeed({
               className="h-10 rounded-lg border border-line bg-white px-2.5 text-sm text-ink outline-none focus:border-moss"
             />
           </div>
+
+          {popularTags.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {popularTags.map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => setQuery(tag)}
+                  className={`rounded-full px-2.5 py-1 text-xs font-semibold transition ${
+                    query.toLowerCase() === tag
+                      ? "bg-ink text-white"
+                      : "bg-moss/10 text-moss hover:bg-moss/20"
+                  }`}
+                >
+                  #{tag}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* PERFIL IMPLÍCITO */}

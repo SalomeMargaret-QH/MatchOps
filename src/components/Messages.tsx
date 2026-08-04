@@ -32,10 +32,20 @@ export function Messages({ initialConversationId }: { initialConversationId?: st
 
   useEffect(() => {
     loadConversations();
+    const interval = setInterval(loadConversations, 15000);
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
     if (activeId) loadThread(activeId);
+  }, [activeId]);
+
+  useEffect(() => {
+    if (!activeId) return;
+    const interval = setInterval(() => {
+      loadThread(activeId, { silent: true });
+    }, 5000);
+    return () => clearInterval(interval);
   }, [activeId]);
 
   useEffect(() => {
@@ -48,8 +58,8 @@ export function Messages({ initialConversationId }: { initialConversationId?: st
     if (response.ok) setConversations(data.conversations);
   }
 
-  async function loadThread(id: string) {
-    setLoadingThread(true);
+  async function loadThread(id: string, options?: { silent?: boolean }) {
+    if (!options?.silent) setLoadingThread(true);
     const response = await fetch(`/api/conversations/${id}`);
     const data = await response.json();
     if (response.ok) {
@@ -58,7 +68,7 @@ export function Messages({ initialConversationId }: { initialConversationId?: st
       setOpportunityTitle(data.conversation.opportunity.title);
       setCurrentUserId(data.currentUserId);
     }
-    setLoadingThread(false);
+    if (!options?.silent) setLoadingThread(false);
   }
 
   async function sendMessage() {
@@ -95,10 +105,14 @@ export function Messages({ initialConversationId }: { initialConversationId?: st
           {/* LISTA DE CONVERSACIONES */}
           <div className="border-b border-line md:border-b-0 md:border-r overflow-y-auto">
             {conversations === null ? (
-              <p className="flex items-center gap-2 p-4 text-sm text-ink/60">
-                <Loader2 size={15} className="animate-spin" />
-                Cargando...
-              </p>
+              <div className="space-y-0.5 p-2">
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="animate-pulse rounded-lg p-2.5">
+                    <div className="h-3 w-2/3 rounded bg-line" />
+                    <div className="mt-2 h-2.5 w-1/2 rounded bg-line/70" />
+                  </div>
+                ))}
+              </div>
             ) : conversations.length === 0 ? (
               <p className="p-4 text-sm text-ink/50">Aún no tienes conversaciones.</p>
             ) : (
